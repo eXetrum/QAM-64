@@ -29,13 +29,28 @@ namespace QAM64
         const int dotRadius = 6;
         // Длина засечек на осях
         const int axislinelen = 8;
-        
+        static int PERIOD_LENGTH = 360;
+
         Dictionary<string, Complex> ConstellationMap = new Dictionary<string, Complex>();
+        Dictionary<Complex, string> InverseConstellationMap = new Dictionary<Complex, string>();
+
+        Dictionary<Complex, Dictionary<float, float>> SignalMap = new Dictionary<Complex, Dictionary<float, float>>();
 
         Pen gridPen = new Pen(Color.LightBlue);
         Pen axisPen = new Pen(Color.Black);
         Pen signalPen = new Pen(Color.MediumOrchid);
         Bitmap ConstellationImg;
+
+        char BinaryStrToChar(string binaryString)
+        {
+            if (binaryString.Length != 8) throw new Exception("Error string format");
+            int value = 0;
+            for(int i = binaryString.Length - 1; i >= 0; --i)
+            {
+                value |= (1 << (7 - i)) * (binaryString[i] - '0');
+            }
+            return (char)value;
+        }
 
         public UserInterface()
         {
@@ -132,11 +147,22 @@ namespace QAM64
                     string binaryString = Convert.ToString(binaryInt, 2);
                     // Следующее число
                     ++binaryInt;
+                    Complex Z = new Complex(I, Q);
                     // Заносим в словарь пары ключ : значение, где ключ - битовая строка, а значение комплексное число
                     ConstellationMap.Add
                     (
                         binaryString.PadLeft(6, '0'),
                         new Complex(I, Q)
+                    );
+                    InverseConstellationMap.Add
+                    (
+                        new Complex(I, Q),
+                        binaryString.PadLeft(6, '0')
+                    );
+                    SignalMap.Add
+                    (
+                        new Complex(I, Q),
+                        Complex.GenerateSignal(new Complex(I, Q))
                     );
                 }
             }
@@ -145,12 +171,20 @@ namespace QAM64
             {
                 Complex Z = ConstellationMap[binaryValue];
                 // Рисуем круг
-                g.DrawEllipse(axisPen, (int)(offsetX + X_GRID_SIZE / 2 * X_STEP_SIZE + Z.Re * 4 * X_STEP_SIZE) - dotRadius / 2, (int)(offsetY + Y_GRID_SIZE / 2 * Y_STEP_SIZE + Z.Im * 4 * Y_STEP_SIZE) - dotRadius / 2, dotRadius, dotRadius);
+                g.DrawEllipse(axisPen, 
+                    (int)(offsetX + X_GRID_SIZE / 2 * X_STEP_SIZE + Z.Re * 4 * X_STEP_SIZE) - dotRadius / 2, 
+                    (int)(offsetY + Y_GRID_SIZE / 2 * Y_STEP_SIZE - Z.Im * 4 * Y_STEP_SIZE) - dotRadius / 2, 
+                    dotRadius, dotRadius);
                 // Закрашиваем его чтобы получилась "точка"
-                g.FillEllipse(Brushes.Brown, (int)(offsetX + X_GRID_SIZE / 2 * X_STEP_SIZE + Z.Re * 4 * X_STEP_SIZE) - dotRadius / 2, (int)(offsetY + Y_GRID_SIZE / 2 * Y_STEP_SIZE + Z.Im * 4 * Y_STEP_SIZE) - dotRadius / 2, dotRadius, dotRadius);
+                g.FillEllipse(Brushes.Brown, 
+                    (int)(offsetX + X_GRID_SIZE / 2 * X_STEP_SIZE + Z.Re * 4 * X_STEP_SIZE) - dotRadius / 2, 
+                    (int)(offsetY + Y_GRID_SIZE / 2 * Y_STEP_SIZE - Z.Im * 4 * Y_STEP_SIZE) - dotRadius / 2,
+                    dotRadius, dotRadius);
                 // Битовая подпись                
-                g.DrawString(binaryValue, drawFontDots, drawBrush, (int)(offsetX + X_GRID_SIZE / 2 * X_STEP_SIZE + Z.Re * 4 * X_STEP_SIZE) - X_STEP_SIZE / 3,
-                    (int)(offsetY + Y_GRID_SIZE / 2 * Y_STEP_SIZE + Z.Im * 4 * Y_STEP_SIZE) - Y_STEP_SIZE / 3, drawFormat);
+                g.DrawString(binaryValue, drawFontDots, drawBrush, 
+                    (int)(offsetX + X_GRID_SIZE / 2 * X_STEP_SIZE + Z.Re * 4 * X_STEP_SIZE) - X_STEP_SIZE / 3,
+                    (int)(offsetY + Y_GRID_SIZE / 2 * Y_STEP_SIZE - Z.Im * 4 * Y_STEP_SIZE) - Y_STEP_SIZE / 3, 
+                    drawFormat);
             }
             // Отладочный вывод
             foreach (var key in ConstellationMap.Keys)
@@ -167,8 +201,14 @@ namespace QAM64
             drawBrush.Dispose();
             g.Dispose(); 
         }
-        private void btnGenerateSignal_Click(object sender, EventArgs e)
+        private void btnSendData_Click(object sender, EventArgs e)
         {
+            //////////////////////////////////////////////////////
+            ///
+            /// Генерируем последовательность для передачи данных
+            ///
+            //////////////////////////////////////////////////////
+            List<KeyValuePair<float, float>> generatedSignal = new List<KeyValuePair<float, float>>();
             string signalString = txtBoxInputBits.Text;
             // Выравниваем длину строки до кратности MAX_BITS_COUNT
             if(signalString.Length % MAX_BITS_COUNT != 0)
@@ -178,12 +218,25 @@ namespace QAM64
             }
             // Определяем количество сигналов необходимых для передачи всей битовой последовательности
             int chunksCount = signalString.Length / MAX_BITS_COUNT;
+            int noisedOffset = 0;
+            if (chBoxNoise.Checked) noisedOffset = 20;
+
+            generatedSignal.Clear();
+            for (int chunk = 0; chunk < chunksCount; ++chunk)
+            {
+                Complex Z = ConstellationMap[signalString.Substring(chunk * MAX_BITS_COUNT, MAX_BITS_COUNT)];
+                if (chBoxNoise.Checked)
+                    generatedSignal.AddRange(Complex.GenerateNoiseSignal(Complex.GenerateSignal(Z)));
+                else
+                    generatedSignal.AddRange(Complex.GenerateSignal(Z));
+            }
+
             // Находим макс/мин амплитуды сигнала
             double minAmp = Double.MaxValue;
             double maxAmp = -Double.MaxValue;
-            foreach(Complex Z in ConstellationMap.Values)
+            foreach(var pair in generatedSignal)
             {
-                double amp = Z.Amplitude;
+                float amp = pair.Value;
                 if (minAmp > amp) minAmp = amp;
                 if (maxAmp < amp) maxAmp = amp;
             }
@@ -196,8 +249,8 @@ namespace QAM64
             float SIGNAL_MAX_WIDTH = pbSignal.Size.Width - offsetX * 2;
             float SIGNAL_MAX_HEIGHT = pbSignal.Size.Height - offsetY * 2;
             float PART_SIZE = (float)(SIGNAL_MAX_WIDTH / chunksCount);
-            float X_SCALE_FACTOR = (float)(PART_SIZE / 360.0f);
-            float Y_SCALE_FACTOR = (float)Math.Round((SIGNAL_MAX_HEIGHT) / ampLength);
+            float X_SCALE_FACTOR = (float)(PART_SIZE / PERIOD_LENGTH);
+            float Y_SCALE_FACTOR = (float)Math.Round((SIGNAL_MAX_HEIGHT + offsetY) / ampLength);
 
             //DrawSignalGrid(ref gg, SIGNAL_MAX_WIDTH, SIGNAL_MAX_HEIGHT + offsetY * 2 + 8, chunksCount);
             ////////////////////////////////////////////////////////////////////////////////////////////
@@ -215,47 +268,106 @@ namespace QAM64
 
             gg.DrawLine(Pens.Black, offsetX, offsetY + SIGNAL_MAX_HEIGHT / 2, offsetX + X_GRID_SIZE * X_STEP_SIZE, offsetY + SIGNAL_MAX_HEIGHT / 2);
             gg.DrawLine(Pens.Black, offsetX, offsetY, offsetX, offsetY + Y_GRID_SIZE * Y_STEP_SIZE);
-
-
             ////////////////////////////////////////////////////////////////////////////////////////////
+            float prevX = 0;
+            float prevY = 0;
+            int quadr = 0;
+            int chunkNumber = 0;
 
-
-            Complex prev = null;
-
-            for (int chunk = 0; chunk < chunksCount; ++chunk)
+            foreach (var v in generatedSignal)
             {
-                Complex Z = ConstellationMap[signalString.Substring(chunk * MAX_BITS_COUNT, MAX_BITS_COUNT)];
-                Dictionary<float, float> values = Complex.Signal(Z);
-                if (prev != null)
+                float x = v.Key;
+                float y = v.Value;
+                if (quadr != 0 && quadr % PERIOD_LENGTH == 0)
                 {
-                    KeyValuePair<float, float> endPoint = Complex.Signal(prev).Last();// values.Last();
+                    chunkNumber++;
                     gg.DrawLine(signalPen,
-                        offsetX + ((chunk - 1) * PART_SIZE) + endPoint.Key * X_SCALE_FACTOR,
-                        offsetY + SIGNAL_MAX_HEIGHT / 2.0f - (endPoint.Value * Y_SCALE_FACTOR),
-                        offsetX + (chunk * PART_SIZE) + values.First().Key * X_SCALE_FACTOR,
-                        offsetY + SIGNAL_MAX_HEIGHT / 2.0f - (values.First().Value * Y_SCALE_FACTOR)
+                        offsetX + ((chunkNumber - 1) * PART_SIZE) + prevX * X_SCALE_FACTOR,
+                        SIGNAL_MAX_HEIGHT / 2.0f - ((float)prevY * Y_SCALE_FACTOR) + offsetY + noisedOffset,
+                        offsetX + (chunkNumber * PART_SIZE) + x * X_SCALE_FACTOR,
+                        SIGNAL_MAX_HEIGHT / 2.0f - ((float)y * Y_SCALE_FACTOR) + offsetY + noisedOffset
                         );
                 }
-                
-                foreach (var v in values)
-                {
-                    float x = v.Key;
-                    float y = v.Value;
-                    gg.DrawEllipse(signalPen, offsetX + (chunk * PART_SIZE) + x * X_SCALE_FACTOR, offsetY + SIGNAL_MAX_HEIGHT / 2.0f - ((float)y * Y_SCALE_FACTOR), dotRadius / 3.0f, dotRadius / 3.0f);
+                else { 
+                    gg.DrawLine(signalPen,
+                        offsetX + (chunkNumber * PART_SIZE) + prevX * X_SCALE_FACTOR,
+                        SIGNAL_MAX_HEIGHT / 2.0f - ((float)prevY * Y_SCALE_FACTOR) + offsetY + noisedOffset,
+                        offsetX + (chunkNumber * PART_SIZE) + x * X_SCALE_FACTOR,
+                        SIGNAL_MAX_HEIGHT / 2.0f - ((float)y * Y_SCALE_FACTOR) + offsetY + noisedOffset
+                        );
                 }
+                prevX = x;
+                prevY = y;
                 
-
-                prev = Z;
-
+                ++quadr;                
+                /*gg.DrawEllipse(signalPen, 
+                    offsetX + (chunk * PART_SIZE) + x * X_SCALE_FACTOR, 
+                    offsetY + SIGNAL_MAX_HEIGHT / 2.0f - ((float)y * Y_SCALE_FACTOR), 
+                    dotRadius / 4.0f, dotRadius / 4.0f);*/
             }
+
+
             pbSignal.Image = signalBmp;
             gg.Dispose();
+
+            //////////////////////////////////////////////////////
+            ///
+            /// Принимаем данные
+            ///
+            //////////////////////////////////////////////////////
+            txtBoxMessageOut.Clear();
+            txtBoxOutputBits.Clear();
+            float[] signalValues = generatedSignal.Select(d => d.Value).ToArray();
+            
+            for(int chunk = 0; chunk < chunksCount; ++chunk)
+            {
+                double minDif = double.MaxValue;
+                float[] curSignalPart = new float[PERIOD_LENGTH];
+                Array.Copy(signalValues, chunk * PERIOD_LENGTH, curSignalPart, 0, PERIOD_LENGTH);
+                Complex candidate = null;
+                foreach(var pair in SignalMap)
+                {
+                    Complex Z = pair.Key;
+                    if (candidate == null)
+                    {
+                        candidate = Z;
+                        continue;
+                    }
+                    else
+                    {
+                        float[] candidateSignal = pair.Value.Select(d => d.Value).ToArray();
+                        double signalDiff = Complex.SignalsDiff(curSignalPart, candidateSignal);
+                        if(minDif > signalDiff)
+                        {
+                            candidate = Z;
+                            minDif = signalDiff;
+                        }
+                    }
+                    
+                }
+                string binary = InverseConstellationMap[candidate];
+                txtBoxOutputBits.AppendText(binary);
+            }
+            string binSeq = txtBoxOutputBits.Text;
+            if (binSeq.Length % 8 != 0)
+            {
+                binSeq = binSeq.Substring(binSeq.Length % 8);
+            }
+            int charCount = binSeq.Length / 8;
+            StringBuilder msg = new StringBuilder();
+            for(int c = 0; c < charCount; ++c)
+            {
+                string curPart = binSeq.Substring(c * 8, 8);
+                char curChar = BinaryStrToChar(curPart);
+                msg.Append(curChar);
+            }
+            txtBoxMessageOut.Text = msg.ToString();
         }
 
         private void txtBoxInputBits_KeyPress(object sender, KeyPressEventArgs e)
         {
             if (e.KeyChar == 0x08) return;
-            if (e.KeyChar == 0x0d && txtBoxInputBits.TextLength > 0) btnGenerateSignal_Click(sender, e);
+            if (e.KeyChar == 0x0d && txtBoxInputBits.TextLength > 0) btnSendData_Click(sender, e);
             if (e.KeyChar != '0' && e.KeyChar != '1')
             {
                 e.Handled = true;
@@ -265,7 +377,35 @@ namespace QAM64
 
         private void txtBoxInputBits_TextChanged(object sender, EventArgs e)
         {
-            btnGenerateSignal.Enabled = txtBoxInputBits.TextLength > 0;
+            btnSendData.Enabled = txtBoxInputBits.TextLength > 0;
+        }
+
+        private void txtBoxMessage_TextChanged(object sender, EventArgs e)
+        {
+            string message = txtBoxMessageInp.Text;
+            StringBuilder bitSequence = new StringBuilder();
+            txtBoxInputBits.Clear();
+            for (int i = 0; i < message.Length; ++i)
+            {
+                int charCode = (int)message[i];
+                bitSequence.Append(Convert.ToString(charCode, 2).PadLeft(8, '0'));
+            }
+            // Выравниваем длину строки до кратности MAX_BITS_COUNT
+            if (bitSequence.Length % MAX_BITS_COUNT != 0)
+            {
+                // Добавляем нули вперед строки
+                bitSequence.Insert(0, new string('0', MAX_BITS_COUNT - bitSequence.Length % MAX_BITS_COUNT));
+            }
+            txtBoxInputBits.Text = bitSequence.ToString();
+        }
+
+        private void txtBoxMessage_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (e.KeyChar == 0x0d && txtBoxMessageInp.TextLength > 0)
+            {
+                btnSendData_Click(sender, e);
+                e.Handled = true;
+            }
         }
     }
 }

@@ -40,7 +40,7 @@ namespace QAM64
             get
             {
                 int quadrant = 1;
-                if(Phase < 0 || Phase > 180)
+                if (Phase < 0 || Phase > 180)
                 {
                     quadrant *= -1;
                 }
@@ -61,7 +61,7 @@ namespace QAM64
             return new Complex(c1.real + c2.real, c1.imaginary + c2.imaginary);
         }
 
-        public static Complex operator - (Complex c1, Complex c2)
+        public static Complex operator -(Complex c1, Complex c2)
         {
             return new Complex(c1.real - c2.real, c1.imaginary - c2.imaginary);
         }
@@ -84,17 +84,62 @@ namespace QAM64
 
         public static double Angle(Complex c)
         {
-            return Math.Atan2(c.imaginary, c.real);
+            double angle = Math.Atan2(c.imaginary, c.real) * 180 / Math.PI;
+            if (angle < 0) angle = 360 + angle;
+            return angle;
         }
 
-        public static Dictionary<float, float> Signal(Complex Z)
+        public static Dictionary<float, float> GenerateSignal(Complex Z)
         {
+            int period = 360;
             Dictionary<float, float> values = new Dictionary<float, float>();
-            for (int angle = 0; angle < 360; ++angle)
+            for (int angle = 0; angle < period; ++angle)
             {
-                values.Add(angle, (float)(Z.Re * Math.Cos(angle * Math.PI / 180) + Z.Im * Math.Sin(angle * Math.PI / 180)));
+                float y = (float)(Z.Re * Math.Cos(angle * Math.PI / 180.0f) + Z.Im * Math.Sin(angle * Math.PI / 180.0f));
+                values.Add(angle, y);
             }
             return values;
+        }
+
+        public static Dictionary<float, float> GenerateNoiseSignal(Dictionary<float, float> original)
+        {
+            Random rnd = new Random(DateTime.Now.Millisecond);
+         
+            Dictionary<float, float> noised = new Dictionary<float, float>();
+            foreach(var pair in original)
+            {
+                double noise = rnd.NextDouble() / (rnd.NextDouble() * 4.0f + 1);
+
+                float x = pair.Key;
+                float y = (float)(pair.Value + noise);
+                
+                noised.Add(x, y);
+            }
+            return noised;
+        }
+
+        public static double SignalsDiff(float [] signalA, float [] signalB)
+        {
+            double sum = 0;
+            int size = signalA.Length < signalB.Length ? signalA.Length : signalB.Length;
+            for(int i = 0; i < size; ++i)
+            {
+                sum += Math.Pow(signalA[i] - signalB[i], 2.0);
+            }
+            return sum;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj == null) return false;
+            if (!(obj is Complex)) return false;
+            Complex that = obj as Complex;
+            return this.real == that.real && this.imaginary == that.imaginary;
+        }
+
+        public override int GetHashCode()
+        {
+            return real.GetHashCode() ^ imaginary.GetHashCode();
         }
 
         public int CompareTo(object obj)
