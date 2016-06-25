@@ -36,17 +36,19 @@
             this.btnSendData = new System.Windows.Forms.Button();
             this.lblMessageInp = new System.Windows.Forms.Label();
             this.txtBoxMessageInp = new System.Windows.Forms.TextBox();
-            this.chBoxNoise = new System.Windows.Forms.CheckBox();
             this.groupBoxEncode = new System.Windows.Forms.GroupBox();
             this.groupBoxDecode = new System.Windows.Forms.GroupBox();
             this.lblMessageOut = new System.Windows.Forms.Label();
-            this.txtBoxOutputBits = new System.Windows.Forms.TextBox();
             this.txtBoxMessageOut = new System.Windows.Forms.TextBox();
+            this.txtBoxOutputBits = new System.Windows.Forms.TextBox();
             this.lblBinSeqOut = new System.Windows.Forms.Label();
+            this.trackBarNoise = new System.Windows.Forms.TrackBar();
+            this.lblNoise = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pbConstellation)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbSignal)).BeginInit();
             this.groupBoxEncode.SuspendLayout();
             this.groupBoxDecode.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBarNoise)).BeginInit();
             this.SuspendLayout();
             // 
             // txtBoxInputBits
@@ -79,11 +81,11 @@
             // 
             // logBox
             // 
-            this.logBox.Location = new System.Drawing.Point(1202, 18);
+            this.logBox.Location = new System.Drawing.Point(1216, 65);
             this.logBox.Multiline = true;
             this.logBox.Name = "logBox";
             this.logBox.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.logBox.Size = new System.Drawing.Size(86, 76);
+            this.logBox.Size = new System.Drawing.Size(72, 29);
             this.logBox.TabIndex = 15;
             this.logBox.Visible = false;
             // 
@@ -99,9 +101,9 @@
             // btnSendData
             // 
             this.btnSendData.Enabled = false;
-            this.btnSendData.Location = new System.Drawing.Point(1048, 60);
+            this.btnSendData.Location = new System.Drawing.Point(1048, 65);
             this.btnSendData.Name = "btnSendData";
-            this.btnSendData.Size = new System.Drawing.Size(148, 34);
+            this.btnSendData.Size = new System.Drawing.Size(162, 29);
             this.btnSendData.TabIndex = 3;
             this.btnSendData.Text = "Передать данные";
             this.btnSendData.UseVisualStyleBackColor = true;
@@ -124,18 +126,6 @@
             this.txtBoxMessageInp.TabIndex = 1;
             this.txtBoxMessageInp.TextChanged += new System.EventHandler(this.txtBoxMessage_TextChanged);
             this.txtBoxMessageInp.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.txtBoxMessage_KeyPress);
-            // 
-            // chBoxNoise
-            // 
-            this.chBoxNoise.AutoSize = true;
-            this.chBoxNoise.Checked = true;
-            this.chBoxNoise.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chBoxNoise.Location = new System.Drawing.Point(1048, 12);
-            this.chBoxNoise.Name = "chBoxNoise";
-            this.chBoxNoise.Size = new System.Drawing.Size(148, 17);
-            this.chBoxNoise.TabIndex = 7;
-            this.chBoxNoise.Text = "Канал с наличием шума";
-            this.chBoxNoise.UseVisualStyleBackColor = true;
             // 
             // groupBoxEncode
             // 
@@ -172,14 +162,6 @@
             this.lblMessageOut.TabIndex = 10;
             this.lblMessageOut.Text = "Сообщение:";
             // 
-            // txtBoxOutputBits
-            // 
-            this.txtBoxOutputBits.Location = new System.Drawing.Point(225, 48);
-            this.txtBoxOutputBits.Name = "txtBoxOutputBits";
-            this.txtBoxOutputBits.ReadOnly = true;
-            this.txtBoxOutputBits.Size = new System.Drawing.Size(281, 20);
-            this.txtBoxOutputBits.TabIndex = 9;
-            // 
             // txtBoxMessageOut
             // 
             this.txtBoxMessageOut.Location = new System.Drawing.Point(225, 19);
@@ -187,6 +169,14 @@
             this.txtBoxMessageOut.ReadOnly = true;
             this.txtBoxMessageOut.Size = new System.Drawing.Size(281, 20);
             this.txtBoxMessageOut.TabIndex = 7;
+            // 
+            // txtBoxOutputBits
+            // 
+            this.txtBoxOutputBits.Location = new System.Drawing.Point(225, 48);
+            this.txtBoxOutputBits.Name = "txtBoxOutputBits";
+            this.txtBoxOutputBits.ReadOnly = true;
+            this.txtBoxOutputBits.Size = new System.Drawing.Size(281, 20);
+            this.txtBoxOutputBits.TabIndex = 9;
             // 
             // lblBinSeqOut
             // 
@@ -197,14 +187,35 @@
             this.lblBinSeqOut.TabIndex = 8;
             this.lblBinSeqOut.Text = "Выходная битовая последовательность:";
             // 
+            // trackBarNoise
+            // 
+            this.trackBarNoise.Location = new System.Drawing.Point(1099, 12);
+            this.trackBarNoise.Maximum = 100;
+            this.trackBarNoise.Name = "trackBarNoise";
+            this.trackBarNoise.Size = new System.Drawing.Size(189, 45);
+            this.trackBarNoise.TabIndex = 16;
+            this.trackBarNoise.Value = 50;
+            this.trackBarNoise.Scroll += new System.EventHandler(this.trackBarNoise_Scroll);
+            // 
+            // lblNoise
+            // 
+            this.lblNoise.AutoSize = true;
+            this.lblNoise.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.lblNoise.Location = new System.Drawing.Point(1058, 12);
+            this.lblNoise.Name = "lblNoise";
+            this.lblNoise.Size = new System.Drawing.Size(18, 20);
+            this.lblNoise.TabIndex = 17;
+            this.lblNoise.Text = "0";
+            // 
             // UserInterface
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1294, 622);
+            this.Controls.Add(this.lblNoise);
+            this.Controls.Add(this.trackBarNoise);
             this.Controls.Add(this.groupBoxDecode);
             this.Controls.Add(this.groupBoxEncode);
-            this.Controls.Add(this.chBoxNoise);
             this.Controls.Add(this.pbSignal);
             this.Controls.Add(this.logBox);
             this.Controls.Add(this.btnSendData);
@@ -218,6 +229,7 @@
             this.groupBoxEncode.PerformLayout();
             this.groupBoxDecode.ResumeLayout(false);
             this.groupBoxDecode.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBarNoise)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -233,13 +245,14 @@
         private System.Windows.Forms.Button btnSendData;
         private System.Windows.Forms.Label lblMessageInp;
         private System.Windows.Forms.TextBox txtBoxMessageInp;
-        private System.Windows.Forms.CheckBox chBoxNoise;
         private System.Windows.Forms.GroupBox groupBoxEncode;
         private System.Windows.Forms.GroupBox groupBoxDecode;
         private System.Windows.Forms.Label lblMessageOut;
         private System.Windows.Forms.TextBox txtBoxMessageOut;
         private System.Windows.Forms.TextBox txtBoxOutputBits;
         private System.Windows.Forms.Label lblBinSeqOut;
+        private System.Windows.Forms.TrackBar trackBarNoise;
+        private System.Windows.Forms.Label lblNoise;
     }
 }
 

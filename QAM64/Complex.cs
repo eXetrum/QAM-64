@@ -89,31 +89,44 @@ namespace QAM64
             return angle;
         }
 
-        public static Dictionary<float, float> GenerateSignal(Complex Z)
+        public static float [] GenerateSignal(Complex Z)
         {
             int period = 360;
-            Dictionary<float, float> values = new Dictionary<float, float>();
+            //Dictionary<float, float> values = new Dictionary<float, float>();
+            float[] values = new float[period];
             for (int angle = 0; angle < period; ++angle)
             {
                 float y = (float)(Z.Re * Math.Cos(angle * Math.PI / 180.0f) + Z.Im * Math.Sin(angle * Math.PI / 180.0f));
-                values.Add(angle, y);
+                values[angle] = y;
+                //values.Add(angle, y);
             }
             return values;
         }
 
-        public static Dictionary<float, float> GenerateNoiseSignal(Dictionary<float, float> original)
+        public static float [] GenerateNoiseSignal(float[] original, int noiseScale)
         {
             Random rnd = new Random(DateTime.Now.Millisecond);
-         
-            Dictionary<float, float> noised = new Dictionary<float, float>();
-            foreach(var pair in original)
-            {
-                double noise = rnd.NextDouble() / (rnd.NextDouble() * 4.0f + 1);
 
-                float x = pair.Key;
-                float y = (float)(pair.Value + noise);
-                
-                noised.Add(x, y);
+            // Находим макс/мин амплитуды сигнала
+            double minAmp = Double.MaxValue;
+            double maxAmp = -Double.MaxValue;
+            foreach (var amp in original)
+            {
+                if (minAmp > amp) minAmp = amp;
+                if (maxAmp < amp) maxAmp = amp;
+            }
+            // Определяем расстояние между минимальым и максимальным значениями амплитуды
+            double ampLength = Math.Abs(minAmp - maxAmp);
+
+            float[] noised = new float[original.Length];
+            Array.Copy(original, noised, original.Length);
+            for(int x = 0; x < original.Length; ++x)
+            {
+                double noise = rnd.NextDouble() * (2 * ampLength / (101 - noiseScale)); /// 100.0f + 1);// 4.0f + 1);
+                int sign = rnd.Next(-1, 2);
+
+                float y = original[x];
+                noised[x] = (float)(y + noise * sign);
             }
             return noised;
         }
